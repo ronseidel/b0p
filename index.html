@@ -417,6 +417,7 @@
 //                  CORS block on GitHub Pages and other static hosting
 //   v20260407-01 — swap corsproxy.io for own Cloudflare Worker proxy at
 //                  b0p-api.theseidel.workers.dev (origin-whitelisted, cached)
+//   v20260407-02 — fix: receiver view not rendering (display fallback bug)
 // =============================================================================
 
 const PLATFORMS = {
@@ -571,7 +572,7 @@ function initSender() {
 
 function renderReceiver(song) {
   document.getElementById('sender-view').style.display  = 'none';
-  document.getElementById('receiver-view').style.display = '';
+  document.getElementById('receiver-view').style.display = 'block';
 
   document.getElementById('rec-song-title').textContent  = song.t || '—';
   document.getElementById('rec-song-artist').textContent = song.a || '—';
