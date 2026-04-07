@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>b0p — send a bop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+<style>
+  /* ─── Design tokens ─────────────────────────────────────────────────────── */
+  :root {
+    --bg:           #0F0E09;
+    --bg-card:      #1B1912;
+    --bg-input:     #242218;
+    --accent:       #F0C040;
+    --accent-hover: #D9AB30;
+    --text:         #EDE8DC;
+    --text-muted:   #6E6A57;
+    --border:       #2E2B1E;
+    --radius:       12px;
+    --radius-sm:    8px;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 22px 80px;
+  }
+
+  /* ─── Logo ──────────────────────────────────────────────────────────────── */
+  .logo {
+    font-family: var(--font-display);
+    font-size: 72px;
+    line-height: 1;
+    letter-spacing: 3px;
+    color: var(--accent);
+    padding-top: 36px;
+    display: block;
+    text-decoration: none;
+    user-select: none;
+  }
+  .logo .zero { color: var(--text); }
+
+  .tagline {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 400;
+    margin-top: 4px;
+    margin-bottom: 36px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── Label ─────────────────────────────────────────────────────────────── */
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  /* ─── Input row ─────────────────────────────────────────────────────────── */
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  input[type="url"],
+  textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+    padding: 12px 14px;
+  }
+
+  input[type="url"]:focus,
+  textarea:focus {
+    border-color: var(--accent);
+  }
+
+  input[type="url"]::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  textarea {
+    resize: none;
+    height: 90px;
+    line-height: 1.5;
+  }
+
+  /* ─── Buttons ───────────────────────────────────────────────────────────── */
+  .btn {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #0F0E09;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1px;
+    padding: 12px 18px;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .btn:hover  { background: var(--accent-hover); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .btn-copy {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #0F0E09;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    padding: 16px;
+    width: 100%;
+    margin-top: 20px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-copy:hover   { background: var(--accent-hover); }
+  .btn-copy:active  { transform: scale(0.98); }
+  .btn-copy.copied  { background: #4CAF50; color: #fff; }
+
+  /* ─── Loading / error ───────────────────────────────────────────────────── */
+  .loading {
+    display: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .loading.on { display: block; }
+
+  .error-msg {
+    display: none;
+    color: #E05555;
+    font-size: 13px;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .error-msg.on { display: block; }
+
+  /* ─── Preview card ───────────────────────────────────────────────────────── */
+  .preview-card {
+    display: none;
+    margin-top: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .preview-card.on { display: block; }
+
+  .preview-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-info {
+    padding: 16px;
+  }
+
+  .preview-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 1px;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .preview-artist {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* ─── Note area ─────────────────────────────────────────────────────────── */
+  .note-wrap {
+    margin-top: 16px;
+  }
+
+  .char-count {
+    display: block;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .char-count.warn { color: #E05555; }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     RECEIVER VIEW
+  ══════════════════════════════════════════════════════════════════════════ */
+  #receiver-view { display: none; }
+  #receiver-view.on { display: block; }
+  #sender-view.hide  { display: none; }
+
+  .rec-eyebrow {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    margin-top: 40px;
+  }
+
+  .rec-headline {
+    font-family: var(--font-display);
+    font-size: 64px;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+
+  /* YouTube embed */
+  .yt-frame {
+    display: none;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: none;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+  }
+  .yt-frame.on { display: block; }
+
+  /* Thumbnail fallback */
+  .rec-thumb {
+    display: none;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+  }
+  .rec-thumb.on { display: block; }
+
+  .rec-song-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    letter-spacing: 1px;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .rec-song-artist {
+    color: var(--text-muted);
+    font-size: 15px;
+    margin-top: 4px;
+    margin-bottom: 20px;
+  }
+
+  .rec-note {
+    display: none;
+    font-size: 15px;
+    font-style: italic;
+    color: var(--text);
+    background: var(--bg-card);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .rec-note.on { display: block; }
+
+  /* Platform grid */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 36px;
+  }
+
+  .p-btn {
+    display: block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 13px 14px;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .p-btn:hover {
+    background: var(--bg-input);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Footer CTA */
+  .footer-cta {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    text-align: center;
+  }
+  .footer-cta p {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .footer-cta a {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .footer-cta a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SENDER VIEW
+═══════════════════════════════════════ -->
+<div id="sender-view">
+  <a class="logo" href="/">b<span class="zero">0</span>p</a>
+  <p class="tagline">share a song that actually opens for your friend</p>
+
+  <p class="label">paste a music link</p>
+  <div class="input-row">
+    <input type="url" id="song-url" placeholder="Spotify, Apple Music, YouTube, Tidal…" autocomplete="off" spellcheck="false">
+    <button class="btn" id="find-btn">FIND</button>
+  </div>
+  <div class="loading" id="loading">looking it up…</div>
+  <div class="error-msg" id="error-msg"></div>
+
+  <!-- Preview card (shown after lookup) -->
+  <div class="preview-card" id="preview-card">
+    <img class="preview-thumb" id="preview-thumb" src="" alt="">
+    <div class="preview-info">
+      <div class="preview-title"  id="preview-title">—</div>
+      <div class="preview-artist" id="preview-artist">—</div>
+
+      <div class="note-wrap">
+        <p class="label" style="margin-top:16px;">add a note (optional)</p>
+        <textarea id="note-input"
+          placeholder="the guitar at 2:14 is unreal…"
+          maxlength="500"></textarea>
+        <span class="char-count" id="char-count">0 / 500</span>
+      </div>
+    </div>
+
+    <div style="padding:0 16px 16px;">
+      <button class="btn-copy" id="copy-btn">COPY YOUR BOP LINK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     RECEIVER VIEW
+═══════════════════════════════════════ -->
+<div id="receiver-view">
+  <a class="logo" href="/">b<span class="zero">0</span>p</a>
+
+  <p class="rec-eyebrow">someone sent you a</p>
+  <div class="rec-headline">b0p 🎵</div>
+
+  <iframe class="yt-frame" id="yt-frame"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen></iframe>
+
+  <img class="rec-thumb" id="rec-thumb" src="" alt="">
+
+  <div class="rec-song-title"  id="rec-song-title">—</div>
+  <div class="rec-song-artist" id="rec-song-artist">—</div>
+
+  <div class="rec-note" id="rec-note"></div>
+
+  <p class="label">open in your app</p>
+  <div class="platform-grid" id="platform-grid"></div>
+
+  <div class="footer-cta">
+    <p>got a bop to share?</p>
+    <a id="send-own-link" href="/">send your own →</a>
+  </div>
+</div>
+
+<script>
+// =============================================================================
+// b0p.app — share a bop
+// Changelog:
+//   v20260401-01 — initial build: sender + receiver views, odesli API,
+//                  LZString URL hash, YouTube embed, platform buttons,
+//                  500-char note, clipboard copy, network error detection
+//   v20260403-01 — clean rebuild: fixes preview UI layout, char counter warn,
+//                  improved platform label map, cleaner YouTube ID extraction,
+//                  logo links to sender view
+//   v20260403-02 — fix: route odesli fetch through corsproxy.io to resolve
+//                  CORS block on GitHub Pages and other static hosting
+//   v20260407-01 — swap corsproxy.io for own Cloudflare Worker proxy at
+//                  b0p-api.theseidel.workers.dev (origin-whitelisted, cached)
+// =============================================================================
+
+const PLATFORMS = {
+  spotify:        'Spotify',
+  appleMusic:     'Apple Music',
+  youtube:        'YouTube',
+  youtubeMusic:   'YouTube Music',
+  tidal:          'Tidal',
+  deezer:         'Deezer',
+  amazon:         'Amazon Music',
+  soundcloud:     'SoundCloud',
+  pandora:        'Pandora',
+  napster:        'Napster',
+};
+
+// ─── Routing ─────────────────────────────────────────────────────────────────
+
+function getHashPayload() {
+  const h = window.location.hash;
+  if (!h.startsWith('#b/')) return null;
+  try {
+    const raw = LZString.decompressFromEncodedURIComponent(h.slice(3));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function buildHash(songObj) {
+  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(songObj));
+  return `#b/${compressed}`;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+const payload = getHashPayload();
+if (payload) {
+  renderReceiver(payload);
+} else {
+  initSender();
+}
+
+// ─── Sender ───────────────────────────────────────────────────────────────────
+
+function initSender() {
+  document.getElementById('sender-view').style.display = '';
+  document.getElementById('receiver-view').style.display = 'none';
+
+  let songData = null;
+
+  const $url      = document.getElementById('song-url');
+  const $findBtn  = document.getElementById('find-btn');
+  const $loading  = document.getElementById('loading');
+  const $error    = document.getElementById('error-msg');
+  const $preview  = document.getElementById('preview-card');
+  const $copyBtn  = document.getElementById('copy-btn');
+  const $note     = document.getElementById('note-input');
+  const $charCount= document.getElementById('char-count');
+
+  $findBtn.addEventListener('click', lookupSong);
+  $url.addEventListener('keydown', e => { if (e.key === 'Enter') lookupSong(); });
+
+  $note.addEventListener('input', () => {
+    const len = $note.value.length;
+    $charCount.textContent = `${len} / 500`;
+    $charCount.classList.toggle('warn', len > 450);
+  });
+
+  $copyBtn.addEventListener('click', () => {
+    if (!songData) return;
+    const obj = { ...songData, n: $note.value.trim().slice(0, 500) };
+    const url = window.location.origin + window.location.pathname + buildHash(obj);
+    navigator.clipboard.writeText(url).then(() => {
+      $copyBtn.textContent = '✓ COPIED!';
+      $copyBtn.classList.add('copied');
+      setTimeout(() => {
+        $copyBtn.textContent = 'COPY YOUR BOP LINK';
+        $copyBtn.classList.remove('copied');
+      }, 2500);
+    }).catch(() => {
+      // Fallback for non-https
+      prompt('Copy this link:', url);
+    });
+  });
+
+  async function lookupSong() {
+    const rawUrl = $url.value.trim();
+    if (!rawUrl) { setError('Paste a music link first.'); return; }
+
+    setError('');
+    setLoading(true);
+    $preview.classList.remove('on');
+    songData = null;
+
+    try {
+      const res = await fetch(`https://b0p-api.theseidel.workers.dev?url=${encodeURIComponent(rawUrl)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.code === 'could.not.fetch.entity.data'
+          ? "Couldn't find that song. Make sure the link is public and try again."
+          : `API error ${res.status}. Try a different link.`);
+      }
+      const data = await res.json();
+
+      // Pull primary entity metadata
+      const entityId  = data.entityUniqueId;
+      const entity    = data.entitiesByUniqueId?.[entityId] || {};
+      const links     = data.linksByPlatform || {};
+
+      const title     = entity.title       || '(unknown title)';
+      const artist    = entity.artistName  || '(unknown artist)';
+      const thumb     = entity.thumbnailUrl || '';
+
+      // Extract YouTube video ID
+      const ytUrl     = links.youtube?.url || links.youtubeMusic?.url || '';
+      const ytId      = extractYouTubeId(ytUrl);
+
+      // Build platform map (only platforms we have labels for)
+      const platforms = {};
+      Object.keys(PLATFORMS).forEach(key => {
+        if (links[key]?.url) platforms[key] = links[key].url;
+      });
+
+      songData = { t: title, a: artist, img: thumb, yt: ytId, p: platforms };
+
+      // Show preview
+      document.getElementById('preview-thumb').src = thumb;
+      document.getElementById('preview-title').textContent  = title;
+      document.getElementById('preview-artist').textContent = artist;
+      $preview.classList.add('on');
+
+    } catch (e) {
+      const isNetwork = e instanceof TypeError;
+      setError(isNetwork
+        ? 'Network error. If you\'re opening this file directly (file://), run it via a local server: python3 -m http.server 8080'
+        : (e.message || 'Something went wrong. Try again.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function setLoading(on) {
+    $loading.classList.toggle('on', on);
+    $findBtn.disabled = on;
+  }
+
+  function setError(msg) {
+    $error.textContent = msg;
+    $error.classList.toggle('on', !!msg);
+  }
+}
+
+// ─── Receiver ─────────────────────────────────────────────────────────────────
+
+function renderReceiver(song) {
+  document.getElementById('sender-view').style.display  = 'none';
+  document.getElementById('receiver-view').style.display = '';
+
+  document.getElementById('rec-song-title').textContent  = song.t || '—';
+  document.getElementById('rec-song-artist').textContent = song.a || '—';
+
+  const $yt    = document.getElementById('yt-frame');
+  const $thumb = document.getElementById('rec-thumb');
+
+  if (song.yt) {
+    $yt.src = `https://www.youtube.com/embed/${song.yt}`;
+    $yt.classList.add('on');
+  } else if (song.img) {
+    $thumb.src = song.img;
+    $thumb.classList.add('on');
+  }
+
+  if (song.n) {
+    const $note = document.getElementById('rec-note');
+    $note.textContent = `"${song.n}"`;
+    $note.classList.add('on');
+  }
+
+  const $grid = document.getElementById('platform-grid');
+  Object.entries(song.p || {}).forEach(([key, url]) => {
+    if (!url || !PLATFORMS[key]) return;
+    const a = document.createElement('a');
+    a.href      = url;
+    a.target    = '_blank';
+    a.rel       = 'noopener noreferrer';
+    a.className = `p-btn p-${key}`;
+    a.textContent = PLATFORMS[key];
+    $grid.appendChild(a);
+  });
+
+  const base = window.location.origin + window.location.pathname;
+  document.getElementById('send-own-link').href = base;
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+
+function extractYouTubeId(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    // Standard: youtube.com/watch?v=ID
+    if (u.hostname.includes('youtube.com')) {
+      return u.searchParams.get('v') || null;
+    }
+    // Short: youtu.be/ID
+    if (u.hostname === 'youtu.be') {
+      return u.pathname.slice(1) || null;
+    }
+  } catch {}
+  return null;
+}
+</script>
+</body>
+</html>
