@@ -333,6 +333,18 @@
     text-decoration: none;
   }
   .footer-cta a:hover { text-decoration: underline; }
+
+  .version-tag {
+    position: fixed;
+    bottom: 6px;
+    right: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    color: rgba(110,106,87,0.4);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 1;
+  }
 </style>
 </head>
 <body>
@@ -418,6 +430,8 @@
 //   v20260407-01 — swap corsproxy.io for own Cloudflare Worker proxy at
 //                  b0p-api.theseidel.workers.dev (origin-whitelisted, cached)
 //   v20260407-02 — fix: receiver view not rendering (display fallback bug)
+//   v20260407-03 — fix: amazonMusic platform key (was 'amazon'), add amazonStore,
+//                  add debug console.log for odesli response, add version footer
 // =============================================================================
 
 const PLATFORMS = {
@@ -427,7 +441,8 @@ const PLATFORMS = {
   youtubeMusic:   'YouTube Music',
   tidal:          'Tidal',
   deezer:         'Deezer',
-  amazon:         'Amazon Music',
+  amazonMusic:    'Amazon Music',
+  amazonStore:    'Amazon',
   soundcloud:     'SoundCloud',
   pandora:        'Pandora',
   napster:        'Napster',
@@ -519,6 +534,8 @@ function initSender() {
           : `API error ${res.status}. Try a different link.`);
       }
       const data = await res.json();
+      console.log('odesli response:', data);
+      console.log('available platforms:', Object.keys(data.linksByPlatform || {}));
 
       // Pull primary entity metadata
       const entityId  = data.entityUniqueId;
@@ -628,5 +645,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
+<div class="version-tag">b0p v20260407-03</div>
 </body>
 </html>
