@@ -50,6 +50,7 @@
     user-select: none;
   }
   .logo .zero { color: var(--text); }
+  .rec-headline .zero { color: var(--text); }
 
   .tagline {
     color: var(--text-muted);
@@ -224,7 +225,7 @@
     color: var(--text-muted);
     font-weight: 500;
     letter-spacing: 0.05em;
-    margin-top: 40px;
+    margin-top: 72px;
   }
 
   .rec-headline {
@@ -390,10 +391,8 @@
      RECEIVER VIEW
 ═══════════════════════════════════════ -->
 <div id="receiver-view">
-  <a class="logo" href="/">b<span class="zero">0</span>p</a>
-
   <p class="rec-eyebrow">someone sent you a</p>
-  <div class="rec-headline">b0p 🎵</div>
+  <div class="rec-headline">b<span class="zero">0</span>p 🎵</div>
 
   <iframe class="yt-frame" id="yt-frame"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -432,6 +431,8 @@
 //   v20260407-02 — fix: receiver view not rendering (display fallback bug)
 //   v20260407-03 — fix: amazonMusic platform key (was 'amazon'), add amazonStore,
 //                  add debug console.log for odesli response, add version footer
+//   v20260407-04 — fix: remove doubled b0p logo/headline on receiver view,
+//                  add ?test=receiver mode for QA without API calls
 // =============================================================================
 
 const PLATFORMS = {
@@ -466,7 +467,27 @@ function buildHash(songObj) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-const payload = getHashPayload();
+// Test mode: add ?test=receiver to URL to preview receiver with mock data
+const TEST_PAYLOAD = {
+  t: "I'm Shakin'",
+  a: 'Rooney',
+  img: 'https://i.scdn.co/image/ab67616d0000b273b13a30e4a8ee54a3e1ad10a1',
+  yt: 'dTAAsCNK7RA',
+  n: 'the guitar at 2:14 is unreal… trust me on this one',
+  p: {
+    spotify:      'https://open.spotify.com/track/0wTYZMOUZ7gMqKrtd5R0OH',
+    appleMusic:   'https://music.apple.com/us/album/im-shakin/1450653383?i=1450653838',
+    youtube:      'https://www.youtube.com/watch?v=dTAAsCNK7RA',
+    youtubeMusic: 'https://music.youtube.com/watch?v=dTAAsCNK7RA',
+    tidal:        'https://tidal.com/track/123456',
+    amazonMusic:  'https://music.amazon.com/albums/B001234',
+    deezer:       'https://www.deezer.com/track/123456',
+  }
+};
+
+const isTestMode = new URLSearchParams(window.location.search).get('test') === 'receiver';
+const payload = isTestMode ? TEST_PAYLOAD : getHashPayload();
+
 if (payload) {
   renderReceiver(payload);
 } else {
@@ -645,6 +666,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
-<div class="version-tag">b0p v20260407-03</div>
+<div class="version-tag">b0p v20260407-04</div>
 </body>
 </html>
