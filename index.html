@@ -341,6 +341,90 @@
   }
   .footer-cta a:hover { text-decoration: underline; }
 
+  /* Match verification */
+  .warning-msg {
+    display: none;
+    background: rgba(240,192,64,0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .warning-msg.on { display: block; }
+  .match-verify {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .match-verify.on { display: block; }
+  .match-verify .label { margin-bottom: 6px; }
+  .match-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    transition: opacity 0.2s;
+  }
+  .match-item.removed {
+    opacity: 0.3;
+    text-decoration: line-through;
+  }
+  .match-item-info { flex: 1; min-width: 0; }
+  .match-item-platform {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .match-item-song {
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .match-item-artist {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .match-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 11px;
+    padding: 5px 10px;
+    margin-left: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .match-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .match-toggle.removed { color: var(--accent); border-color: var(--accent); }
+  .isrc-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #4CAF50;
+    background: rgba(76,175,80,0.12);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
   .version-tag {
     position: fixed;
     bottom: 6px;
@@ -384,6 +468,15 @@
           placeholder="the guitar at 2:14 is unreal…"
           maxlength="500"></textarea>
         <span class="char-count" id="char-count">0 / 500</span>
+      </div>
+    </div>
+
+    <!-- Match verification (shown when search-based matches need confirmation) -->
+    <div class="warning-msg" id="warning-msg"></div>
+    <div class="match-verify" id="match-verify">
+      <div style="padding: 0 16px;">
+        <p class="label">we found this song on other platforms — look right?</p>
+        <div id="match-list"></div>
       </div>
     </div>
 
@@ -445,6 +538,10 @@
 //                  Space Mono branding. Added: SoundCloud, Bandcamp, Pandora buttons.
 //   v20260408-02 — fix: hide broken image when no thumbnail available
 //   v20260408-03 — fix: platform buttons render in priority order (Spotify/Apple first)
+//   v20260409-01 — MAJOR: sender confirmation flow for search-based matches.
+//                  Source metadata (title/artist/thumbnail) never overwritten.
+//                  SoundCloud + Bandcamp page scraping. ISRC matches auto-confirmed.
+//                  matchInfo from worker tells frontend which links need review.
 // =============================================================================
 
 const PLATFORMS = {
@@ -480,22 +577,22 @@ function buildHash(songObj) {
 
 // Test mode: add ?test=receiver to URL to preview receiver with mock data
 const TEST_PAYLOAD = {
-  t: "I'm Shakin'",
-  a: 'Rooney',
-  img: 'https://i.scdn.co/image/ab67616d0000b273b13a30e4a8ee54a3e1ad10a1',
-  yt: 'dTAAsCNK7RA',
-  n: 'the guitar at 2:14 is unreal… trust me on this one',
+  t: "Love Vibration",
+  a: 'Ron the Ron',
+  img: 'https://f4.bcbits.com/img/a0339810137_16.jpg',
+  yt: null,
+  n: 'this track is pure vibes',
   p: {
-    spotify:      'https://open.spotify.com/track/0wTYZMOUZ7gMqKrtd5R0OH',
-    appleMusic:   'https://music.apple.com/us/album/im-shakin/1450653383?i=1450653838',
-    youtube:      'https://www.youtube.com/watch?v=dTAAsCNK7RA',
-    youtubeMusic: 'https://music.youtube.com/search?q=Rooney+I%27m+Shakin',
-    tidal:        'https://tidal.com/search?q=Rooney+I%27m+Shakin',
-    amazonMusic:  'https://music.amazon.com/search/Rooney+I%27m+Shakin',
-    deezer:       'https://www.deezer.com/search/Rooney+I%27m+Shakin',
-    soundcloud:   'https://soundcloud.com/search/sounds?q=Rooney+I%27m+Shakin',
-    bandcamp:     'https://bandcamp.com/search?q=Rooney+I%27m+Shakin',
-    pandora:      'https://www.pandora.com/search/Rooney+I%27m+Shakin/tracks',
+    spotify:      'https://open.spotify.com/track/EXAMPLE',
+    appleMusic:   'https://music.apple.com/us/album/love-vibration/EXAMPLE',
+    youtube:      'https://www.youtube.com/results?search_query=Ron+the+Ron+Love+Vibration',
+    youtubeMusic: 'https://music.youtube.com/search?q=Ron+the+Ron+Love+Vibration',
+    tidal:        'https://tidal.com/search?q=Ron+the+Ron+Love+Vibration',
+    amazonMusic:  'https://music.amazon.com/search/Ron+the+Ron+Love+Vibration',
+    deezer:       'https://www.deezer.com/search/Ron+the+Ron+Love+Vibration',
+    soundcloud:   'https://soundcloud.com/search/sounds?q=Ron+the+Ron+Love+Vibration',
+    bandcamp:     'https://rontheronmusic.bandcamp.com/track/love-vibration',
+    pandora:      'https://www.pandora.com/search/Ron+the+Ron+Love+Vibration/tracks',
   }
 };
 
@@ -515,15 +612,18 @@ function initSender() {
   document.getElementById('receiver-view').style.display = 'none';
 
   let songData = null;
+  let removedPlatforms = new Set();
 
-  const $url      = document.getElementById('song-url');
-  const $findBtn  = document.getElementById('find-btn');
-  const $loading  = document.getElementById('loading');
-  const $error    = document.getElementById('error-msg');
-  const $preview  = document.getElementById('preview-card');
-  const $copyBtn  = document.getElementById('copy-btn');
-  const $note     = document.getElementById('note-input');
-  const $charCount= document.getElementById('char-count');
+  const $url       = document.getElementById('song-url');
+  const $findBtn   = document.getElementById('find-btn');
+  const $loading   = document.getElementById('loading');
+  const $error     = document.getElementById('error-msg');
+  const $preview   = document.getElementById('preview-card');
+  const $copyBtn   = document.getElementById('copy-btn');
+  const $note      = document.getElementById('note-input');
+  const $charCount = document.getElementById('char-count');
+  const $matchVerify = document.getElementById('match-verify');
+  const $matchList   = document.getElementById('match-list');
 
   $findBtn.addEventListener('click', lookupSong);
   $url.addEventListener('keydown', e => { if (e.key === 'Enter') lookupSong(); });
@@ -536,7 +636,13 @@ function initSender() {
 
   $copyBtn.addEventListener('click', () => {
     if (!songData) return;
-    const obj = { ...songData, n: $note.value.trim().slice(0, 500) };
+    // Build platforms excluding removed ones
+    const filteredPlatforms = {};
+    Object.entries(songData.p).forEach(([key, url]) => {
+      if (!removedPlatforms.has(key)) filteredPlatforms[key] = url;
+    });
+    const obj = { t: songData.t, a: songData.a, img: songData.img, yt: songData.yt, p: filteredPlatforms };
+    if ($note.value.trim()) obj.n = $note.value.trim().slice(0, 500);
     const url = window.location.origin + window.location.pathname + buildHash(obj);
     navigator.clipboard.writeText(url).then(() => {
       $copyBtn.textContent = '✓ COPIED!';
@@ -546,7 +652,6 @@ function initSender() {
         $copyBtn.classList.remove('copied');
       }, 2500);
     }).catch(() => {
-      // Fallback for non-https
       prompt('Copy this link:', url);
     });
   });
@@ -558,7 +663,11 @@ function initSender() {
     setError('');
     setLoading(true);
     $preview.classList.remove('on');
+    $matchVerify.classList.remove('on');
+    $matchList.innerHTML = '';
+    document.getElementById('warning-msg').classList.remove('on');
     songData = null;
+    removedPlatforms = new Set();
 
     try {
       const res = await fetch(`https://b0p-api.theseidel.workers.dev?url=${encodeURIComponent(rawUrl)}`);
@@ -569,24 +678,94 @@ function initSender() {
       const data = await res.json();
       console.log('b0p API response:', data);
 
+      // API-level error (unrecognized URL, failed resolution)
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const title     = data.title    || '(unknown title)';
       const artist    = data.artist   || '(unknown artist)';
       const thumb     = data.thumbnail || '';
       const platforms = data.platforms || {};
+      const matchInfo = data.matchInfo || {};
+      const apiWarnings = data.warnings || [];
       const ytId      = data.youtubeId || extractYouTubeId(platforms.youtube || '');
 
       songData = { t: title, a: artist, img: thumb, yt: ytId, p: platforms };
 
-      // Show preview
+      // Show preview with SOURCE metadata (never overwritten by search results)
       const $thumb = document.getElementById('preview-thumb');
-      if (thumb) {
-        $thumb.src = thumb;
-        $thumb.style.display = '';
-      } else {
-        $thumb.style.display = 'none';
-      }
+      if (thumb) { $thumb.src = thumb; $thumb.style.display = ''; }
+      else { $thumb.style.display = 'none'; }
       document.getElementById('preview-title').textContent  = title;
       document.getElementById('preview-artist').textContent = artist;
+
+      // Show warnings if any
+      const $warning = document.getElementById('warning-msg');
+      if (apiWarnings.length > 0) {
+        $warning.textContent = apiWarnings.join(' ');
+        $warning.classList.add('on');
+      } else {
+        $warning.classList.remove('on');
+      }
+
+      // Show match verification for search-based cross-platform links
+      const searchMatches = [];
+      Object.entries(matchInfo).forEach(([platform, info]) => {
+        if (info.method === 'search' && info.foundTitle && PLATFORMS[platform]) {
+          searchMatches.push({ platform, ...info });
+        }
+      });
+
+      if (searchMatches.length > 0) {
+        searchMatches.forEach(match => {
+          const $item = document.createElement('div');
+          $item.className = 'match-item';
+          $item.dataset.platform = match.platform;
+
+          const $info = document.createElement('div');
+          $info.className = 'match-item-info';
+          $info.innerHTML = `
+            <div class="match-item-platform">${PLATFORMS[match.platform]}</div>
+            <div class="match-item-song">${match.foundTitle}</div>
+            <div class="match-item-artist">${match.foundArtist}</div>
+          `;
+
+          const $btn = document.createElement('button');
+          $btn.className = 'match-toggle';
+          $btn.textContent = 'Remove';
+          $btn.addEventListener('click', () => {
+            const isRemoved = $item.classList.toggle('removed');
+            $btn.classList.toggle('removed', isRemoved);
+            $btn.textContent = isRemoved ? 'Undo' : 'Remove';
+            if (isRemoved) removedPlatforms.add(match.platform);
+            else removedPlatforms.delete(match.platform);
+          });
+
+          $item.appendChild($info);
+          $item.appendChild($btn);
+          $matchList.appendChild($item);
+        });
+
+        // Also show ISRC-confirmed matches (no remove button)
+        Object.entries(matchInfo).forEach(([platform, info]) => {
+          if (info.method === 'isrc' && info.foundTitle && PLATFORMS[platform]) {
+            const $item = document.createElement('div');
+            $item.className = 'match-item';
+            $item.innerHTML = `
+              <div class="match-item-info">
+                <div class="match-item-platform">${PLATFORMS[platform]} <span class="isrc-badge">ISRC ✓</span></div>
+                <div class="match-item-song">${info.foundTitle}</div>
+                <div class="match-item-artist">${info.foundArtist}</div>
+              </div>
+            `;
+            $matchList.appendChild($item);
+          }
+        });
+
+        $matchVerify.classList.add('on');
+      }
+
       $preview.classList.add('on');
 
     } catch (e) {
@@ -672,6 +851,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
-<div class="version-tag">b0p v20260408-03</div>
+<div class="version-tag">b0p v20260409-01</div>
 </body>
 </html>
