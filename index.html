@@ -444,6 +444,7 @@
 //                  Accepts 7 input platforms, resolves to 10 output platforms.
 //                  Space Mono branding. Added: SoundCloud, Bandcamp, Pandora buttons.
 //   v20260408-02 — fix: hide broken image when no thumbnail available
+//   v20260408-03 — fix: platform buttons render in priority order (Spotify/Apple first)
 // =============================================================================
 
 const PLATFORMS = {
@@ -636,8 +637,10 @@ function renderReceiver(song) {
   }
 
   const $grid = document.getElementById('platform-grid');
-  Object.entries(song.p || {}).forEach(([key, url]) => {
-    if (!url || !PLATFORMS[key]) return;
+  // Render in PLATFORMS priority order (Spotify & Apple Music first)
+  Object.keys(PLATFORMS).forEach(key => {
+    const url = (song.p || {})[key];
+    if (!url) return;
     const a = document.createElement('a');
     a.href      = url;
     a.target    = '_blank';
@@ -669,6 +672,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
-<div class="version-tag">b0p v20260408-02</div>
+<div class="version-tag">b0p v20260408-03</div>
 </body>
 </html>
