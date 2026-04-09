@@ -443,6 +443,7 @@
 //                  + iTunes API + YouTube/SoundCloud/Bandcamp oEmbed + Deezer API).
 //                  Accepts 7 input platforms, resolves to 10 output platforms.
 //                  Space Mono branding. Added: SoundCloud, Bandcamp, Pandora buttons.
+//   v20260408-02 — fix: hide broken image when no thumbnail available
 // =============================================================================
 
 const PLATFORMS = {
@@ -576,7 +577,13 @@ function initSender() {
       songData = { t: title, a: artist, img: thumb, yt: ytId, p: platforms };
 
       // Show preview
-      document.getElementById('preview-thumb').src = thumb;
+      const $thumb = document.getElementById('preview-thumb');
+      if (thumb) {
+        $thumb.src = thumb;
+        $thumb.style.display = '';
+      } else {
+        $thumb.style.display = 'none';
+      }
       document.getElementById('preview-title').textContent  = title;
       document.getElementById('preview-artist').textContent = artist;
       $preview.classList.add('on');
@@ -662,6 +669,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
-<div class="version-tag">b0p v20260408-01</div>
+<div class="version-tag">b0p v20260408-02</div>
 </body>
 </html>
