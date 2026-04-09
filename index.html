@@ -6,7 +6,7 @@
 <title>b0p — send a bop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
   /* ─── Design tokens ─────────────────────────────────────────────────────── */
@@ -21,7 +21,7 @@
     --border:       #2E2B1E;
     --radius:       12px;
     --radius-sm:    8px;
-    --font-display: 'Bebas Neue', sans-serif;
+    --font-display: 'Space Mono', monospace;
     --font-body:    'DM Sans', sans-serif;
   }
 
@@ -40,9 +40,10 @@
   /* ─── Logo ──────────────────────────────────────────────────────────────── */
   .logo {
     font-family: var(--font-display);
-    font-size: 72px;
+    font-size: 48px;
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: 3px;
+    letter-spacing: -1px;
     color: var(--accent);
     padding-top: 36px;
     display: block;
@@ -116,8 +117,9 @@
     color: #0F0E09;
     cursor: pointer;
     font-family: var(--font-display);
-    font-size: 18px;
-    letter-spacing: 1px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     padding: 12px 18px;
     white-space: nowrap;
     transition: background 0.15s, transform 0.1s;
@@ -134,8 +136,9 @@
     color: #0F0E09;
     cursor: pointer;
     font-family: var(--font-display);
-    font-size: 22px;
-    letter-spacing: 2px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     padding: 16px;
     width: 100%;
     margin-top: 20px;
@@ -187,9 +190,10 @@
 
   .preview-title {
     font-family: var(--font-display);
-    font-size: 26px;
-    letter-spacing: 1px;
-    line-height: 1.1;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
     color: var(--text);
   }
 
@@ -230,10 +234,11 @@
 
   .rec-headline {
     font-family: var(--font-display);
-    font-size: 64px;
+    font-size: 42px;
+    font-weight: 700;
     color: var(--accent);
     line-height: 1;
-    letter-spacing: 3px;
+    letter-spacing: -1px;
     margin-bottom: 24px;
   }
 
@@ -261,9 +266,10 @@
 
   .rec-song-title {
     font-family: var(--font-display);
-    font-size: 32px;
-    letter-spacing: 1px;
-    line-height: 1.1;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
     color: var(--text);
   }
 
@@ -339,7 +345,7 @@
     position: fixed;
     bottom: 6px;
     right: 8px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Space Mono', monospace;
     font-size: 9px;
     color: rgba(110,106,87,0.4);
     letter-spacing: 0.04em;
@@ -359,7 +365,7 @@
 
   <p class="label">paste a music link</p>
   <div class="input-row">
-    <input type="url" id="song-url" placeholder="Spotify, Apple Music, YouTube, Tidal…" autocomplete="off" spellcheck="false">
+    <input type="url" id="song-url" placeholder="Spotify, Apple Music, YouTube, SoundCloud, Bandcamp…" autocomplete="off" spellcheck="false">
     <button class="btn" id="find-btn">FIND</button>
   </div>
   <div class="loading" id="loading">looking it up…</div>
@@ -433,6 +439,10 @@
 //                  add debug console.log for odesli response, add version footer
 //   v20260407-04 — fix: remove doubled b0p logo/headline on receiver view,
 //                  add ?test=receiver mode for QA without API calls
+//   v20260408-01 — MAJOR: replace odesli with self-hosted resolver (Spotify API
+//                  + iTunes API + YouTube/SoundCloud/Bandcamp oEmbed + Deezer API).
+//                  Accepts 7 input platforms, resolves to 10 output platforms.
+//                  Space Mono branding. Added: SoundCloud, Bandcamp, Pandora buttons.
 // =============================================================================
 
 const PLATFORMS = {
@@ -443,10 +453,9 @@ const PLATFORMS = {
   tidal:          'Tidal',
   deezer:         'Deezer',
   amazonMusic:    'Amazon Music',
-  amazonStore:    'Amazon',
   soundcloud:     'SoundCloud',
+  bandcamp:       'Bandcamp',
   pandora:        'Pandora',
-  napster:        'Napster',
 };
 
 // ─── Routing ─────────────────────────────────────────────────────────────────
@@ -478,10 +487,13 @@ const TEST_PAYLOAD = {
     spotify:      'https://open.spotify.com/track/0wTYZMOUZ7gMqKrtd5R0OH',
     appleMusic:   'https://music.apple.com/us/album/im-shakin/1450653383?i=1450653838',
     youtube:      'https://www.youtube.com/watch?v=dTAAsCNK7RA',
-    youtubeMusic: 'https://music.youtube.com/watch?v=dTAAsCNK7RA',
-    tidal:        'https://tidal.com/track/123456',
-    amazonMusic:  'https://music.amazon.com/albums/B001234',
-    deezer:       'https://www.deezer.com/track/123456',
+    youtubeMusic: 'https://music.youtube.com/search?q=Rooney+I%27m+Shakin',
+    tidal:        'https://tidal.com/search?q=Rooney+I%27m+Shakin',
+    amazonMusic:  'https://music.amazon.com/search/Rooney+I%27m+Shakin',
+    deezer:       'https://www.deezer.com/search/Rooney+I%27m+Shakin',
+    soundcloud:   'https://soundcloud.com/search/sounds?q=Rooney+I%27m+Shakin',
+    bandcamp:     'https://bandcamp.com/search?q=Rooney+I%27m+Shakin',
+    pandora:      'https://www.pandora.com/search/Rooney+I%27m+Shakin/tracks',
   }
 };
 
@@ -550,32 +562,16 @@ function initSender() {
       const res = await fetch(`https://b0p-api.theseidel.workers.dev?url=${encodeURIComponent(rawUrl)}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.code === 'could.not.fetch.entity.data'
-          ? "Couldn't find that song. Make sure the link is public and try again."
-          : `API error ${res.status}. Try a different link.`);
+        throw new Error(body.error || `API error ${res.status}. Try a different link.`);
       }
       const data = await res.json();
-      console.log('odesli response:', data);
-      console.log('available platforms:', Object.keys(data.linksByPlatform || {}));
+      console.log('b0p API response:', data);
 
-      // Pull primary entity metadata
-      const entityId  = data.entityUniqueId;
-      const entity    = data.entitiesByUniqueId?.[entityId] || {};
-      const links     = data.linksByPlatform || {};
-
-      const title     = entity.title       || '(unknown title)';
-      const artist    = entity.artistName  || '(unknown artist)';
-      const thumb     = entity.thumbnailUrl || '';
-
-      // Extract YouTube video ID
-      const ytUrl     = links.youtube?.url || links.youtubeMusic?.url || '';
-      const ytId      = extractYouTubeId(ytUrl);
-
-      // Build platform map (only platforms we have labels for)
-      const platforms = {};
-      Object.keys(PLATFORMS).forEach(key => {
-        if (links[key]?.url) platforms[key] = links[key].url;
-      });
+      const title     = data.title    || '(unknown title)';
+      const artist    = data.artist   || '(unknown artist)';
+      const thumb     = data.thumbnail || '';
+      const platforms = data.platforms || {};
+      const ytId      = data.youtubeId || extractYouTubeId(platforms.youtube || '');
 
       songData = { t: title, a: artist, img: thumb, yt: ytId, p: platforms };
 
@@ -666,6 +662,6 @@ function extractYouTubeId(url) {
   return null;
 }
 </script>
-<div class="version-tag">b0p v20260407-04</div>
+<div class="version-tag">b0p v20260408-01</div>
 </body>
 </html>
